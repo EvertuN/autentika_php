@@ -8,6 +8,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $usuario = $_POST['usuario'];
     $senha = $_POST['senha'];
 
+    if (!csrf_verify($_POST['csrf_token'] ?? '')) {
+        die('Erro de segurança: Token inválido.');
+    }
 
     $sql = $pdo->prepare("SELECT * FROM users WHERE usuario = ? AND ativo = 1 LIMIT 1");
     $sql->execute([$usuario]);
@@ -37,37 +40,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <!DOCTYPE html>
 <html>
-
 <head>
     <meta charset="UTF-8">
     <title>Login</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
 </head>
-
 <body class="bg-light d-flex justify-content-center align-items-center" style="height:100vh;">
-    <form method="POST" class="p-4 bg-white shadow rounded" style="min-width:300px;">
-        <h4 class="mb-3">Login</h4>
+<form method="POST" class="p-4 bg-white shadow rounded" style="min-width:300px;">
+    <?= csrf_input() ?>
+    <h4 class="mb-3">Login</h4>
 
 
-        <?php if (isset($erro)): ?>
+    <?php if (isset($erro)): ?>
             <div class="alert alert-danger"><?= $erro ?></div>
-        <?php endif; ?>
+    <?php endif; ?>
 
 
-        <div class="mb-3">
-            <label>Usuário</label>
-            <input type="text" name="usuario" class="form-control" required>
-        </div>
+    <div class="mb-3">
+        <label>Usuário</label>
+        <input type="text" name="usuario" class="form-control" required>
+    </div>
 
 
-        <div class="mb-3">
-            <label>Senha</label>
-            <input type="password" name="senha" class="form-control" required>
-        </div>
+    <div class="mb-3">
+        <label>Senha</label>
+        <input type="password" name="senha" class="form-control" required>
+    </div>
 
 
-        <button class="btn btn-primary w-100">Entrar</button>
-    </form>
+    <button class="btn btn-primary w-100">Entrar</button>
+</form>
 </body>
-
 </html>

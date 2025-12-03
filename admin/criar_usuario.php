@@ -2,22 +2,31 @@
 global $pdo;
 require '../auth/check.php';
 require '../config/db.php';
-if ($_SESSION['tipo'] !== 'admin') die('Acesso negado');
+if ($_SESSION['tipo'] !== 'admin')
+    die('Acesso negado');
 
 $successMessage = '';
 
 function uuidv4()
 {
-    return sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
-        mt_rand(0, 0xffff), mt_rand(0, 0xffff),
+    return sprintf(
+        '%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+        mt_rand(0, 0xffff),
+        mt_rand(0, 0xffff),
         mt_rand(0, 0xffff),
         mt_rand(0, 0x0fff) | 0x4000,
         mt_rand(0, 0x3fff) | 0x8000,
-        mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
+        mt_rand(0, 0xffff),
+        mt_rand(0, 0xffff),
+        mt_rand(0, 0xffff)
     );
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!csrf_verify($_POST['csrf_token'] ?? '')) {
+        die('Erro de segurança: Token inválido.');
+    }
+
     $id = uuidv4();
     $nome = $_POST['nome'];
     $usuario = $_POST['usuario'];
@@ -47,10 +56,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 
     <?php if ($successMessage): ?>
-        <div class="alert alert-success"><?= $successMessage ?></div>
+            <div class="alert alert-success"><?= $successMessage ?></div>
     <?php endif; ?>
 
     <form method="POST" class="card p-4">
+        <?= csrf_input() ?>
         <div class="mb-3">
             <label for="nome" class="form-label">Nome</label>
             <input type="text" id="nome" name="nome" class="form-control" required>

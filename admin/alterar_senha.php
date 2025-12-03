@@ -3,12 +3,17 @@ global $pdo;
 require '../auth/check.php';
 require '../config/db.php';
 
-if ($_SESSION['tipo'] !== 'admin') die('Acesso negado');
+if ($_SESSION['tipo'] !== 'admin')
+    die('Acesso negado');
 
 $msg = '';
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!csrf_verify($_POST['csrf_token'] ?? '')) {
+        die('Erro de segurança: Token inválido.');
+    }
+
     $senha_atual = $_POST['senha_atual'];
     $nova_senha = $_POST['nova_senha'];
     $confirmar_senha = $_POST['confirmar_senha'];
@@ -49,13 +54,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 
     <?php if ($msg): ?>
-        <div class="alert alert-success"><?= htmlspecialchars($msg) ?></div>
+            <div class="alert alert-success"><?= htmlspecialchars($msg) ?></div>
     <?php endif; ?>
     <?php if ($error): ?>
-        <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
+            <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
     <?php endif; ?>
 
     <form method="POST" class="card p-4">
+        <?= csrf_input() ?>
         <div class="mb-3">
             <label for="senha_atual" class="form-label">Senha Atual</label>
             <input type="password" id="senha_atual" name="senha_atual" class="form-control" required>
