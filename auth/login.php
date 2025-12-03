@@ -2,11 +2,19 @@
 global $pdo;
 require '../config/db.php';
 require '../config/session.php';
+require '../config/rate_limiter.php';
+require '../config/logger.php';
 
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $usuario = $_POST['usuario'];
     $senha = $_POST['senha'];
+    $ip = $_SERVER['REMOTE_ADDR'];
+
+    if (check_rate_limit($ip, $usuario)) {
+        log_event('LOGIN_BLOCKED', ['username' => $usuario, 'reason' => 'Rate limit exceeded']);
+        die('Muitas tentativas falhas. Tente novamente em 15 minutos.');
+    }
 
     if (!csrf_verify($_POST['csrf_token'] ?? '')) {
         die('Erro de segurança: Token inválido.');
@@ -19,11 +27,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($user && password_verify($senha, $user['senha'])) {
         session_regenerate_id(true);
+        clear_failed_logins($ip, $usuario);
+
         $_SESSION['id'] = $user['id'];
         $_SESSION['nome'] = $user['nome'];
         $_SESSION['tipo'] = $user['tipo'];
         $_SESSION['ultimo_uso'] = time();
 
+        log_event('LOGIN_SUCCESS', ['username' => $usuario, 'role' => $user['tipo']], $user['id']);
 
         if ($user['tipo'] === 'admin')
             header("Location: ../admin");
@@ -32,7 +43,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-
+    record_failed_login($ip, $usuario);
+    log_event('LOGIN_FAILED', ['username' => $usuario, 'ip' => $ip]);
     $erro = "Usuário ou senha inválidos.";
 }
 ?>
@@ -40,35 +52,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <!DOCTYPE html>
 <html>
+
 <head>
     <meta charset="UTF-8">
     <title>Login</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
 </head>
+
 <body class="bg-light d-flex justify-content-center align-items-center" style="height:100vh;">
-<form method="POST" class="p-4 bg-white shadow rounded" style="min-width:300px;">
-    <?= csrf_input() ?>
-    <h4 class="mb-3">Login</h4>
+    <form method="POST" class="p-4 bg-white shadow rounded" style="min-width:300px;">
+        <?= csrf_input() ?>
+        <h4 class="mb-3">Login</h4>
 
 
-    <?php if (isset($erro)): ?>
+        <?php if (isset($erro)): ?>
             <div class="alert alert-danger"><?= $erro ?></div>
-    <?php endif; ?>
+        <?php endif; ?>
 
 
-    <div class="mb-3">
-        <label>Usuário</label>
-        <input type="text" name="usuario" class="form-control" required>
-    </div>
+        <div class="mb-3">
+            <label>Usuário</label>
+            <input type="text" name="usuario" class="form-control" required>
+        </div>
 
 
-    <div class="mb-3">
-        <label>Senha</label>
-        <input type="password" name="senha" class="form-control" required>
-    </div>
+        <div class="mb-3">
+            <label>Senha</label>
+            <input type="password" name="senha" class="form-control" required>
+        </div>
 
 
-    <button class="btn btn-primary w-100">Entrar</button>
-</form>
+        <button class="btn btn-primary w-100">Entrar</button>
+    </form>
 </body>
+
 </html>
