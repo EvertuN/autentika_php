@@ -2,6 +2,7 @@
 global $pdo;
 require '../auth/check.php';
 require '../config/db.php';
+require '../config/logger.php';
 
 if ($_SESSION['tipo'] !== 'admin')
     die('Acesso negado');
@@ -28,6 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $senhaHash = password_hash($nova_senha, PASSWORD_DEFAULT);
             $update = $pdo->prepare("UPDATE users SET senha = ? WHERE id = ?");
             $update->execute([$senhaHash, $_SESSION['id']]);
+            log_event('CHANGE_PASSWORD');
             $msg = "Senha alterada com sucesso!";
         } else {
             $error = "A nova senha e a confirmação não correspondem.";
@@ -39,45 +41,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
+
 <head>
     <meta charset="UTF-8">
     <title>Alterar Senha</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
+
 <body class="bg-light">
 
-<div class="container mt-5">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>Alterar Senha</h2>
-        <a href="index.php" class="btn btn-secondary">Voltar ao Painel</a>
+    <div class="container mt-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>Alterar Senha</h2>
+            <a href="index.php" class="btn btn-secondary">Voltar ao Painel</a>
+        </div>
+
+        <?php if ($msg): ?>
+            <div class="alert alert-success"><?= htmlspecialchars($msg) ?></div>
+        <?php endif; ?>
+        <?php if ($error): ?>
+            <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
+        <?php endif; ?>
+
+        <form method="POST" class="card p-4">
+            <?= csrf_input() ?>
+            <div class="mb-3">
+                <label for="senha_atual" class="form-label">Senha Atual</label>
+                <input type="password" id="senha_atual" name="senha_atual" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label for="nova_senha" class="form-label">Nova Senha</label>
+                <input type="password" id="nova_senha" name="nova_senha" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label for="confirmar_senha" class="form-label">Confirmar Nova Senha</label>
+                <input type="password" id="confirmar_senha" name="confirmar_senha" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Alterar Senha</button>
+        </form>
     </div>
 
-    <?php if ($msg): ?>
-            <div class="alert alert-success"><?= htmlspecialchars($msg) ?></div>
-    <?php endif; ?>
-    <?php if ($error): ?>
-            <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
-    <?php endif; ?>
-
-    <form method="POST" class="card p-4">
-        <?= csrf_input() ?>
-        <div class="mb-3">
-            <label for="senha_atual" class="form-label">Senha Atual</label>
-            <input type="password" id="senha_atual" name="senha_atual" class="form-control" required>
-        </div>
-        <div class="mb-3">
-            <label for="nova_senha" class="form-label">Nova Senha</label>
-            <input type="password" id="nova_senha" name="nova_senha" class="form-control" required>
-        </div>
-        <div class="mb-3">
-            <label for="confirmar_senha" class="form-label">Confirmar Nova Senha</label>
-            <input type="password" id="confirmar_senha" name="confirmar_senha" class="form-control" required>
-        </div>
-        <button type="submit" class="btn btn-primary">Alterar Senha</button>
-    </form>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
+
 </html>
